@@ -93,14 +93,14 @@ manual中有详细的grep用法，grep确实有很强大的功能；</br>
 3. 错误；</br>解释及实验证据同回答1。
 4. 错误；</br>git-clone 的 Manual Page 中的 DESCRIPTION 也有这样的话 creates and checks out an initial branch that is forked from the cloned repository’s currently active branch（创造并检出一个初始分支，这个分支是克隆仓库的当前活动分支的叉），可见默认的初始分支是远程仓库当前的活动分支的检出，不一定是 master。</p>
 我也做了这样的实验创造了反例,工作区的默认分支为tutor：
->vcb@bm  ~/Documents/GitHub/Tutorial (tutor)
->$ git clone https://github.com/YoungForest/Tutorial.git</br>
->vcb@bm  ~/Documents/GitHub/Tutorial (tutor)</br>
->$ git branch -a</br>
->\* tutor</br>
->  remotes/origin/HEAD -> origin/tutor</br>
->  remotes/origin/branch1</br>
->  remotes/origin/tutor</br>
+> vcb@bm  ~/Documents/GitHub/Tutorial (tutor)
+> $ git clone https://github.com/YoungForest/Tutorial.git</br>
+> vcb@bm  ~/Documents/GitHub/Tutorial (tutor)</br>
+> $ git branch -a</br>
+> \* tutor</br>
+>   remotes/origin/HEAD -> origin/tutor</br>
+>   remotes/origin/branch1</br>
+>   remotes/origin/tutor</br>
 
 
 ## 2.实验难点图示
