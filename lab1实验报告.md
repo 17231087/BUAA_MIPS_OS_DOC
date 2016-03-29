@@ -66,11 +66,11 @@ manual中有详细的grep用法，grep确实有很强大的功能；</br>
 
 ### thinking 2.2
 ##### 问题描述：
-> 思考下面四个描述，你觉得哪些正确，哪些错误，请给出你参考的资料或实验证据。
-> 1. 克隆时所有分支均被克隆，但只有 HEAD 指向的分支被检出。
-> 2. 克隆出的工作区中执行 git log、 git status、 git checkout、 git commit 等操作不会去访问远程版本库。
-> 3. 克隆时只有远程版本库 HEAD 指向的分支被克隆。
-> 4. 克隆后工作区的默认分支处于 master 分支。
+> 思考下面四个描述，你觉得哪些正确，哪些错误，请给出你参考的资料或实验证据。</br>
+> 1. 克隆时所有分支均被克隆，但只有 HEAD 指向的分支被检出。</br>
+> 2. 克隆出的工作区中执行 git log、 git status、 git checkout、 git commit 等操作不会去访问远程版本库。</br>
+> 3. 克隆时只有远程版本库 HEAD 指向的分支被克隆。</br>
+> 4. 克隆后工作区的默认分支处于 master 分支。</br>
 
 ##### 问题解答：
 为了解答这些问题，我特意重新在新目录下使用了克隆，以下实验证据也均是我自己亲自测试过的。
@@ -92,8 +92,8 @@ manual中有详细的grep用法，grep确实有很强大的功能；</br>
 实验证据：在断网的情况下，这些命令依旧可以使用，可见这些命令不会访问远程服务器。
 3. 错误；</br>解释及实验证据同回答1。
 4. 错误；</br>git-clone 的 Manual Page 中的 DESCRIPTION 也有这样的话 creates and checks out an initial branch that is forked from the cloned repository’s currently active branch（创造并检出一个初始分支，这个分支是克隆仓库的当前活动分支的叉），可见默认的初始分支是远程仓库当前的活动分支的检出，不一定是 master。</p>
-我也做了这样的实验创造了反例,工作区的默认分支为tutor：
-> vcb@bm  ~/Documents/GitHub/Tutorial (tutor)
+我也做了相应的实验来创造反例,工作区的默认分支为tutor：</br>
+> vcb@bm  ~/Documents/GitHub/Tutorial (tutor)</br>
 > $ git clone https://github.com/YoungForest/Tutorial.git</br>
 > vcb@bm  ~/Documents/GitHub/Tutorial (tutor)</br>
 > $ git branch -a</br>
