@@ -27,9 +27,9 @@ Index的低位保存TLB的索引。这不需要很多位，因为还没有MIPS C
 
 而我们在tlb_out中也是这么干的，下面我分析一下关键汇编指令的作用，也就是跳转到NOFOUND的流程：
 
-`mfc0    k1,CP0_ENTRYHI`     # GPR[K1]->CP0的CP0_ENTRYHI寄存器，这个寄存器包含两个域，VPN2(虚拟页号)和ASID(地址空间标识符）；这条命令将存在GPR[K1]中的虚拟页号存入CP0的指定寄存器中，为tlb处理做准备。
+`mfc0    k1,CP0_ENTRYHI`     # CP0的CP0_ENTRYHI寄存器->GPR[K1]，这个寄存器包含两个域，VPN2(虚拟页号)和ASID(地址空间标识符）；这条命令将存在中CP0的指定寄存器的虚拟页号存入GPR[K1]中，为tlb处理做准备。
 
-`mtc0    a0,CP0_ENTRYHI`    # 将CP0的ENTRYHI寄存器中的值存入GPR[a0],作为调用子程序的参数
+`mtc0    a0,CP0_ENTRYHI`    # 将GPR[a0]中的值存入CP0的ENTRYHI寄存器,而GPR[a0]按照约定存的是调用tlb_out函数时传入的参数
 
 `tlbp`  # 软件搜索tlb表项，会自动设置CP0寄存器Index的值,并且如果未找到匹配项的话，Index的最高位会设置为1，也就是负数。
 
@@ -38,6 +38,14 @@ Index的低位保存TLB的索引。这不需要很多位，因为还没有MIPS C
 `bltz   k0,NOFOUND`     #如果GPR[k0] < 0，也就是CP0_INDEX < 0,也就是tlbp未能成功找到虚拟页号对应的页帧号,跳转到NOFOUND
 
 以上资料均参照了 see MIPS run linux，以MIPS32为准，MIPS64有些许不同.
+	
+补充关于以下3条指令的理解：
+
+	mtc0 zero,CP0_ENTRYHI 	# 将CP0_ENTRYHI寄存器置为0
+	mtc0 zero,CP0_ENTRYLO0  # 将CP0_ENTRYLO0寄存器置为0
+	tlbwi # write TLB entry at index
+
+这3条指令会在TLB命中的情况下执行,此时CP0_INDEX存储着相应的TLB项，前两条指令将CP0_ENTRYHI和CP0_ENTRYLO0置为0，最后一条指令将其写入index对应的TLB项，也就是将这一项清0，实现tlb_out的功能，如果虚拟地址va对应的虚拟页号页存在于TLB，废止va对应的TLB项。
 
 ## 2. 实验难点图示
 本次实验主要比较难理解的是，一个地址究竟什么时候是物理地址，什么时候是虚拟地址，还有两种地址之间的转换。
