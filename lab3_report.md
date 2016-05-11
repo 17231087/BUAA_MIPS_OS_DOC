@@ -42,6 +42,12 @@ Insert in reverse order,so that the first call to env_alloc() return envs[0].
 	思考user_data 这个参数的作用。没有这个参数可不可以？为什么？
 	（如果你能说明哪些应用场景中可能会应用这种设计就更好了。可以举一个实际的库中的例子）
 
+可以看到，在函数`load_icode_mapper`中`void *user_data`被强制转换为`struct Env *env`,这也就意味着，这个用户数据指针，在函数中一直是当作一个进程指针在使用。观察这个`env`的行为(我们自己填的)，也正是我们所预料的，他在作为一个进程指针行使功能。
+
+所以没有这个参数是不可以的，很难想象，没有进程指针，我们如何进行映射和内存装载。
+
+我不太明白括号中这种设计具体指的是什么，我的理解是“使用`void *`类型作为形参，在函数体内在进行类型转换，来完成预定的功能”。这种设计在C语言标准库中很常见，比如我们常用的`void qsort(void*, size_t, size_t,int (*)cmp(const void*, const void*));`,在函数指针cmp的参数列表中，以`void *`为形参，实现qsort的通用性，与比较函数无关。类比发现，我们小操作系统中`load_icode_mapper()`的地位与`cmp()`很接近，都是作为函数指针被另一个函数(在我们的小操作系统中是`int load_elf(u_char *binary, int size, u_long *entry_point, void *user_data,int (*map)(u_long va, u_int32_t sgsize,u_char *bin, u_int32_t bin_size, void *user_data))`)以参数形式调用。
+
 ## Thinking 3.4
 	思考上面这一段话，并根据自己在lab2 中的理解，回答：
 	• 我们这里出现的” 指令位置” 的概念，你认为该概念是针对虚拟空间，还是物
@@ -50,9 +56,41 @@ Insert in reverse order,so that the first call to env_alloc() return envs[0].
 	同？
 	• 从布局图中找到你认为最有可能是entry_point的值。
 
+1. 虚拟空间。在lab2内存管理中，我们学习到，“一切皆虚拟地址”。也就是说无论进程还是内核直接操纵的地址都是虚拟地址，虚拟地址转物理地址在硬件mmu中完成。
+
+2. 我认为是不一样的。
+
+	我们可以发现，entry_point的值是在`load_elf()`中修改的`*entry_point = ehdr->e_entry`;
+	那这个`ehdr->e_entry`又是什么东西呢？追本溯源，在load_elf()的开头有`Elf32_Ehdr *ehdr = (Elf32_Ehdr *)binary`，而根据注释，binary是“an elf format binary file”，即“elf格式的二进制文件”，这行代码实际上是获得的elf的文件头；在`include/kerelf.h`中我们可以找到`Elf32_Ehdr结构体`的定义，找到e_entry,有这样的注释“Entry point virtual address”，这也成为了第一问的佐证。
+	关于elf的文件头和相关域的作用，wiki百科上有更详细的解释:<https://en.wikipedia.org/wiki/Executable_and_Linkable_Format>
+
+	结论就是，entry_point是在elf格式的二进制文件中写好的，每个进程的entry_point值是可以不一样的，只要它们可以在自己的elf文件头中设置自己的ehdr->e_entry。
+
+	实验验证：在我们实验中所用到的elf是“code_a.c"和"code_b.c"这两个二进制文件，里面写的什么我也看不懂，但我通过printf输出两个进程的`ehdr->e_entry`发现，都是`0x4000b0`(这也为下一问提供佐证)，可见这两个进程的entry_point是相同的，但这也不代表所有进程的entry_point相同。
+
+	这种entry_point不同可以为各个进程决定自己的程序入口提供方便，增加编程的灵活性。
+
+3. entry_point的值最可能为`UTEXT(0x40 0000)+offset`,这里的偏移量也是有进程的elf文件头决定的，在我们的实验中 两个进程的偏移量均为`0xb0`.
+
 ## Thinking 3.5
 	思考一下，要保存的进程上下文中的env_tf.pc的值应该设置为多少？
 	为什么要这样设置？
+
+先贴出我填的代码，
+
+	struct Trapframe *old;
+	old = (struct Trapframe*)TIMESTACK - sizeof(struct Trapframe);
+	bcopy(old, &curenv->env_tf, sizeof(struct Trapframe));
+	curenv->env_tf.pc = old->cp0_epc;
+
+这4行代码是将当前进程的状态保存下来，以便下次切换到该进程时可以接着运行。关键点在这里的`old->cp0_epc`,让我们来看看《See MIPS run Linux》上是怎样解释`cp0_epc`这个寄存器的吧：
+
+	异常返回地址(EPC)寄存器
+
+	这是一个保存异常返回点的寄存器。导致（或遭受）异常的指令地址存入EPC，
+	除非Cause寄存器的BD位置位了，这种情况下EPC指向前一条（分支）指令。如果CPU是64位，那么EPC也是64位。
+
+这样我们就不难理解，要保存的进程上下文中的env_tf.pc的值应该设置为old->cp0_epc。
 
 ## Thinking 3.6
 	思考TIMESTACK 的含义，并找出相关语句与证明来回答以下关于
@@ -73,7 +111,9 @@ Insert in reverse order,so that the first call to env_alloc() return envs[0].
 
 	当然，紧跟着的Note也解释了MIPS3000中SR寄存器的功能描述。而`MIPS R3000`实现的也是`MIPS-I`指令集，所以我认为如果指导书在这里简要说明一下这些历史渊源比较好，否则在我们找资料的时候刚开始会比较晕。
 
-2. load_icode_mapper()
+2. load_icode_mapper()，这个函数我认为是本次实验的难点，我也多次修改这个函数才得到最后的正确结果。
+
+	首先，这个函数的功能是很好理解的，被核心就是要把bin段的内容加载到内存。
 
 # 残留疑点
 
